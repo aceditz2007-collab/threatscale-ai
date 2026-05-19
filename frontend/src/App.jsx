@@ -58,7 +58,7 @@ export default function App() {
       setLoading(true);
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/analyze",
+        "https://threatscale-ai-production.up.railway.app/analyze",
         formData
       );
 
