@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
 import numpy as np
-import pytesseract
-import cv2
+import easyocr
 import uvicorn
 import os
 
@@ -18,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# EasyOCR Reader
+reader = easyocr.Reader(['en'], gpu=False)
 
 
 @app.get("/")
@@ -42,16 +44,13 @@ async def analyze_image(file: UploadFile = File(...)):
 
         image_np = np.array(image)
 
-        # Convert to Grayscale
-        gray = cv2.cvtColor(
+        # OCR Text Extraction
+        results = reader.readtext(
             image_np,
-            cv2.COLOR_RGB2GRAY
+            detail=0
         )
 
-        # OCR Text Extraction
-        extracted_text = pytesseract.image_to_string(
-            gray
-        ).lower()
+        extracted_text = " ".join(results).lower()
 
         # Scam Keywords
         keyword_list = {
