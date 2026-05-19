@@ -1,13 +1,16 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-import easyocr
 from PIL import Image
 import io
 import numpy as np
+import pytesseract
+import cv2
+import uvicorn
+import os
 
 app = FastAPI()
 
-# CORS
+# CORS Settings
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,38 +19,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# OCR Reader
-reader = None
 
 @app.get("/")
 def home():
+
     return {
         "message": "ThreatScale AI Backend Running"
     }
 
+
 @app.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
 
-    global reader
-
-    if reader is None:
-        reader = easyocr.Reader(['en'])
-
     try:
+
+        # Read Image
         contents = await file.read()
 
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
+        image = Image.open(
+            io.BytesIO(contents)
+        ).convert("RGB")
+
         image_np = np.array(image)
 
-        # OCR Extraction
-        results = reader.readtext(
+        # Convert to Grayscale
+        gray = cv2.cvtColor(
             image_np,
-            detail=0
+            cv2.COLOR_RGB2GRAY
         )
 
-        extracted_text = " ".join(results).lower()
+        # OCR Text Extraction
+        extracted_text = pytesseract.image_to_string(
+            gray
+        ).lower()
 
-        # Keyword Database
+        # Scam Keywords
         keyword_list = {
             "urgent": 20,
             "bank": 15,
@@ -65,37 +71,48 @@ async def analyze_image(file: UploadFile = File(...)):
             "bitcoin": 20,
             "investment": 15,
             "login": 15,
-            "security alert": 25,
+            "security alert": 25
         }
 
         suspicious_keywords = []
+
         score = 0
 
+        # Detect Keywords
         for keyword, weight in keyword_list.items():
 
             if keyword in extracted_text:
+
                 suspicious_keywords.append(keyword)
+
                 score += weight
 
-        score = min(score, 100)
+        # Max Score
+        if score > 100:
+            score = 100
 
-        # Threat Levels
+        # Threat Level
         if score >= 75:
+
             threat_level = "Critical"
 
         elif score >= 50:
+
             threat_level = "High"
 
         elif score >= 25:
+
             threat_level = "Medium"
 
         else:
+
             threat_level = "Low"
 
         # Emotion Detection
         emotions = []
 
         if "urgent" in extracted_text:
+
             emotions.append({
                 "label": "Urgency",
                 "value": 90,
@@ -103,6 +120,7 @@ async def analyze_image(file: UploadFile = File(...)):
             })
 
         if "winner" in extracted_text or "prize" in extracted_text:
+
             emotions.append({
                 "label": "Excitement",
                 "value": 75,
@@ -110,6 +128,7 @@ async def analyze_image(file: UploadFile = File(...)):
             })
 
         if "account suspended" in extracted_text:
+
             emotions.append({
                 "label": "Fear",
                 "value": 85,
@@ -117,13 +136,16 @@ async def analyze_image(file: UploadFile = File(...)):
             })
 
         if "verify" in extracted_text:
+
             emotions.append({
                 "label": "Trust Bait",
                 "value": 65,
                 "color": "cyan"
             })
 
+        # Default Emotion
         if len(emotions) == 0:
+
             emotions.append({
                 "label": "Neutral",
                 "value": 20,
@@ -145,13 +167,14 @@ async def analyze_image(file: UploadFile = File(...)):
             "success": False,
             "error": str(e)
         }
-    
-import uvicorn
-import os
+
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    
+
+    port = int(
+        os.environ.get("PORT", 10000)
+    )
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
