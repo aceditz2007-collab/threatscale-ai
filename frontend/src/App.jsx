@@ -57,9 +57,12 @@ export default function App() {
     try {
       setLoading(true);
 
-      const response = await axios.post(
+      const response = await fetch(
         "https://threatscale-ai-production.up.railway.app/analyze",
-        formData
+        {
+          method: "POST",
+          body: formData,
+        }
       );
 
       setAnalysis(response.data);
