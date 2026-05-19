@@ -17,7 +17,7 @@ app.add_middleware(
 )
 
 # OCR Reader
-reader = easyocr.Reader(['en'])
+reader = None
 
 @app.get("/")
 def home():
@@ -28,8 +28,12 @@ def home():
 @app.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
 
-    try:
+    global reader
 
+    if reader is None:
+        reader = easyocr.Reader(['en'])
+
+    try:
         contents = await file.read()
 
         image = Image.open(io.BytesIO(contents)).convert("RGB")
