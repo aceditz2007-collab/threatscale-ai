@@ -7,7 +7,11 @@ import easyocr
 import uvicorn
 import os
 
-app = FastAPI()
+app = FastAPI(
+    title="ThreatScale AI API",
+    description="AI-powered phishing and scam detection system using OCR and emotional trigger analysis.",
+    version="1.0.0"
+)
 
 # CORS Settings
 app.add_middleware(
