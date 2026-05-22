@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
@@ -13,7 +14,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Settings
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,8 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# EasyOCR Reader
-reader = easyocr.Reader(['en'], gpu=False)
+# Load OCR Reader
+reader = easyocr.Reader(['en'])
 
 
 @app.get("/")
@@ -39,7 +40,6 @@ async def analyze_image(file: UploadFile = File(...)):
 
     try:
 
-        # Read Image
         contents = await file.read()
 
         image = Image.open(
@@ -81,7 +81,6 @@ async def analyze_image(file: UploadFile = File(...)):
 
         score = 0
 
-        # Detect Keywords
         for keyword, weight in keyword_list.items():
 
             if keyword in extracted_text:
@@ -90,7 +89,6 @@ async def analyze_image(file: UploadFile = File(...)):
 
                 score += weight
 
-        # Max Score
         if score > 100:
             score = 100
 
@@ -146,7 +144,6 @@ async def analyze_image(file: UploadFile = File(...)):
                 "color": "cyan"
             })
 
-        # Default Emotion
         if len(emotions) == 0:
 
             emotions.append({
@@ -175,11 +172,11 @@ async def analyze_image(file: UploadFile = File(...)):
 if __name__ == "__main__":
 
     port = int(
-        os.environ.get("PORT", 10000)
+        os.environ.get("PORT", 8080)
     )
 
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
         port=port
     )
